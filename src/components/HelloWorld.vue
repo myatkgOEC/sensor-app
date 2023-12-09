@@ -1,60 +1,117 @@
 <template>
-  <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-pwa" target="_blank" rel="noopener">pwa</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-router" target="_blank" rel="noopener">router</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-vuex" target="_blank" rel="noopener">vuex</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
+  <div>
+    <v-row>
+      <v-select
+        v-model="selectedAggregation"
+        :items="['hourly', 'daily', 'weekly', 'monthly']"
+        label="Aggregate Data"
+        class="mb-4"
+      />
+    </v-row>
+    <v-row class="d-flex justify-center mb-6">
+      <v-col
+        class="d-flex align-content-start flex-wrap justify-center"
+        cols="12"
+      >
+        <v-card v-for="(data, index) in chartData" :key="index" class="ma-2">
+          <sensor-mixed-chart :data="data" :options="options" />
+        </v-card>
+      </v-col>
+    </v-row>
   </div>
 </template>
 
 <script>
-export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  }
-}
-</script>
+import { mapState } from "vuex";
+import { aggregateSensorData } from "../utility/aggregateSensorData";
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
-}
-</style>
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "vue-chartjs";
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+const SensorMixedChart = {
+  extends: Bar,
+  props: ["chartData", "options"],
+  mounted() {
+    if (this.chartData) {
+      this.renderChart(this.chartData, this.options);
+    }
+  },
+  watch: {
+    chartData: {
+      handler(newData) {
+        if (newData) {
+          this.renderChart(newData, this.options);
+        }
+      },
+      deep: true,
+    },
+  },
+};
+
+export default {
+  name: "ChartCard",
+  components: {
+    SensorMixedChart,
+  },
+  data() {
+    return {
+      selectedAggregation: "hourly",
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+      },
+    };
+  },
+  computed: {
+    ...mapState(["sensorData"]),
+    chartData() {
+      const computed = this.sensorData.map((sensor) =>
+        this.prepareChartData(
+          aggregateSensorData(sensor, this.selectedAggregation)
+        )
+      );
+      return computed;
+    },
+  },
+  methods: {
+    prepareChartData(sensorData) {
+      const labels = sensorData.map((item) => item.datetime);
+      const datasets = [];
+
+      const dataKeys = Object.keys(sensorData[0]).filter(
+        (key) => key !== "datetime"
+      );
+      dataKeys.forEach((key) => {
+        const data = sensorData.map((item) => item[key].value);
+        datasets.push({
+          label: sensorData[0][key].label,
+          data: data,
+          ...sensorData[0][key].chartStyle,
+        });
+      });
+
+      return { labels, datasets };
+    },
+  },
+};
+</script>
