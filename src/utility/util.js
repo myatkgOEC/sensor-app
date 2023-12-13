@@ -50,7 +50,7 @@ export function randomValue(min, max, options = {}) {
  * Space Complexity: O(n * m), as each data point is stored in the array,
  *                      and each data point contains m key-value pairs.
  */
-export function generateSensorData(startDate, propertyRanges) {
+export function generateSensorData(startDate, propertyRanges, sensorNo = 0) {
   const sensorData = [];
   let currentDatetime = startDate.getTime();
   const now = new Date().getTime();
@@ -65,6 +65,7 @@ export function generateSensorData(startDate, propertyRanges) {
         value: randomValue(...range, options),
         chartStyle: options.chartStyle || {}, // Default to an empty object if no chartStyle is provided
         label: options.label || key, // Use a custom label if provided, else default to the key
+        name: `Sensor_${sensorNo + 1}`,
       };
     }
 
@@ -90,9 +91,33 @@ export function generateDataForMultipleSensors(
   const allSensorData = [];
 
   for (let i = 0; i < numberOfSensors; i++) {
-    const sensorData = generateSensorData(startDate, propertyRanges);
+    const sensorData = generateSensorData(startDate, propertyRanges, i);
     allSensorData.push(sensorData);
   }
 
   return allSensorData;
+}
+
+export function formatLabel(datetime, aggregation) {
+  const date = new Date(datetime);
+  switch (aggregation) {
+    case "hourly":
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    case "daily":
+      return date.toLocaleDateString();
+    case "weekly":
+      return `${date.toLocaleDateString()} - ${new Date(
+        date.getTime() + 6 * 24 * 60 * 60 * 1000
+      ).toLocaleDateString()}`;
+    case "monthly":
+      return date.toLocaleString("default", {
+        month: "short",
+        year: "numeric",
+      });
+    default:
+      return datetime;
+  }
 }

@@ -1,4 +1,6 @@
-import {
+import { dateFns } from "./dateFns";
+
+const {
   startOfHour,
   endOfHour,
   startOfDay,
@@ -13,7 +15,7 @@ import {
   eachMonthOfInterval,
   isWithinInterval,
   parseISO,
-} from "date-fns";
+} = dateFns;
 
 function aggregateSensorData(sensorData, intervalType) {
   if (!sensorData || sensorData.length === 0) {
@@ -44,7 +46,7 @@ function aggregateSensorData(sensorData, intervalType) {
   };
 
   const { startFunc, endFunc, eachFunc } = intervalFunctions[intervalType];
-  const parsedData = sensorData.map((d) => ({
+  const parsedData = sensorData?.map((d) => ({
     ...d,
     datetime: parseISO(d.datetime),
   }));
@@ -78,7 +80,7 @@ function aggregateSensorData(sensorData, intervalType) {
 
       Object.keys(filteredData[0]).forEach((property) => {
         if (property !== "datetime") {
-          const values = filteredData.map((item) => item[property].value);
+          const values = filteredData?.map((item) => item[property].value);
           aggregatedPoint[property] = {
             ...filteredData[0][property], // Retain the style and label
           };
@@ -121,3 +123,60 @@ function sum(values) {
 }
 
 export { aggregateSensorData };
+
+// export function preprocessSensorData(sensorData) {
+//   console.log({ sensorData });
+//   // Create an index for quick lookups
+//   const indexedSensorData = sensorData.reduce((acc, sensor) => {
+//     sensor.forEach((data) => {
+//       const date = new Date(data.datetime);
+//       const year = date.getFullYear();
+//       const month = date.getMonth(); // 0-indexed
+//       const day = date.getDate();
+
+//       if (!acc[year]) {
+//         acc[year] = {};
+//       }
+//       if (!acc[year][month]) {
+//         acc[year][month] = {};
+//       }
+//       if (!acc[year][month][day]) {
+//         acc[year][month][day] = [];
+//       }
+//       acc[year][month][day].push(data);
+//     });
+//     return acc;
+//   }, {});
+//   console.log({ indexedSensorData });
+//   return indexedSensorData;
+// }
+
+// export function filterDataForAggregation(
+//   indexedSensorData,
+//   selectedAggregation,
+//   selectedDate
+// ) {
+//   const selectedDateObj = new Date(selectedDate);
+//   const selectedYear = selectedDateObj.getFullYear();
+//   const selectedMonth = selectedDateObj.getMonth();
+//   const selectedDay = selectedDateObj.getDate();
+
+//   switch (selectedAggregation.toLowerCase()) {
+//     case "hourly":
+//       return (
+//         indexedSensorData[selectedYear]?.[selectedMonth]?.[selectedDay] || []
+//       );
+//     case "daily":
+//       return Object.values(
+//         indexedSensorData[selectedYear]?.[selectedMonth] || {}
+//       ).flat();
+//     case "weekly":
+//       // Implement similar logic for weekly, considering getWeeksInLastFourMonths
+//       break;
+//     case "monthly":
+//       const startYear = selectedYear - 1;
+//       return Object.keys(indexedSensorData)
+//         .filter((year) => year >= startYear && year <= selectedYear)
+//         .flatMap((year) => Object.values(indexedSensorData[year]).flat(2));
+//   }
+// }
